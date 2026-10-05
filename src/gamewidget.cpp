@@ -10,12 +10,13 @@ GameWidget::GameWidget(QWidget* parent) : QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent);
+    setAttribute(Qt::WA_KeyCompression, true);
     setMinimumSize(1000, 600);
 
     QTimer::singleShot(100, this, [this]{ setFocus(); });
 
-    game_ = std::make_unique<Game>();
-    game_->setup();
+    // game_ = std::make_unique<Game>();
+    // game_->setup();
     // game_->start();
 
     timer_ = new QTimer(this);
@@ -29,6 +30,8 @@ GameWidget::~GameWidget() {
 }
 
 void GameWidget::update_camera() {
+    if (!game_) return;
+
     // Центрируем на игроке
     auto snap = game_->snapshot();
     for (auto& t : snap.tanks) {
@@ -56,23 +59,47 @@ void GameWidget::on_frame() {
 }
 
 void GameWidget::update_player_input() {
-    float dx = 0, dy = 0;
-    if (key_w_) dy -= 1;
-    if (key_s_) dy += 1;
-    if (key_a_) dx -= 1;
-    if (key_d_) dx += 1;
+    if (!game_) return;
 
-    // Прицел — на курсор мыши
-    float wx = cam_x_ + mouse_world_x_ / cfg::TILE_SIZE;
-    float wy = cam_y_ + mouse_world_y_ / cfg::TILE_SIZE;
+    // ---- P1 ----
+    float dx1 = 0, dy1 = 0;
+    if (key_w_) dy1 -= 1;
+    if (key_s_) dy1 += 1;
+    if (key_a_) dx1 -= 1;
+    if (key_d_) dx1 += 1;
 
+    // Прицел P1 — по мыши (только в одиночной игре)
+    float aim1 = 0;
     auto snap = game_->snapshot();
-    float px = 0, py = 0;
+    float px1 = 0, py1 = 0;
     for (auto& t : snap.tanks) {
-        if (t.is_player) { px = t.x; py = t.y; break; }
+        if (t.id == 0) { px1 = t.x; py1 = t.y; break; }
     }
-    float aim = std::atan2(wy - py, wx - px);
-    game_->set_player_input(dx, dy, aim, fire_);
+    if (game_->mode() == GameMode::SinglePlayer) {
+        float wx = cam_x_ + mouse_world_x_ / cfg::TILE_SIZE;
+        float wy = cam_y_ + mouse_world_y_ / cfg::TILE_SIZE;
+        aim1 = std::atan2(wy - py1, wx - px1);
+    } else {
+        // В дуэли башни не крутятся — aim = направление движения
+        if (dx1 != 0 || dy1 != 0) aim1 = std::atan2(dy1, dx1);
+        else aim1 = snap.tanks[0].angle;   // сохранить текущий
+    }
+
+    game_->set_player_input(0, dx1, dy1, aim1, fire_);
+
+    // ---- P2 (только в дуэли) ----
+    if (game_->mode() == GameMode::TwoPlayers && snap.tanks.size() > 1) {
+        float dx2 = 0, dy2 = 0;
+        if (p2_w_) dy2 -= 1;
+        if (p2_s_) dy2 += 1;
+        if (p2_a_) dx2 -= 1;
+        if (p2_d_) dx2 += 1;
+
+        float aim2 = snap.tanks[1].angle;
+        if (dx2 != 0 || dy2 != 0) aim2 = std::atan2(dy2, dx2);
+
+        game_->set_player_input(1, dx2, dy2, aim2, p2_fire_);
+    }
 }
 
 // ============================================================ input
@@ -82,15 +109,33 @@ void GameWidget::keyPressEvent(QKeyEvent* e) {
              << " hasFocus:" << hasFocus();
 
     if (e->isAutoRepeat()) { e->accept(); return; }
+
+    bool is_duo = game_ && game_->mode() == GameMode::TwoPlayers;
+
     switch (e->key()) {
-    case Qt::Key_W: case Qt::Key_Up:    key_w_ = true; break;
-    case Qt::Key_S: case Qt::Key_Down:  key_s_ = true; break;
-    case Qt::Key_A: case Qt::Key_Left:  key_a_ = true; break;
-    case Qt::Key_D: case Qt::Key_Right: key_d_ = true; break;
+    // ---- P1 ----
+    case Qt::Key_W: key_w_ = true; break;
+    case Qt::Key_A: key_a_ = true; break;
+    case Qt::Key_S: key_s_ = true; break;
+    case Qt::Key_D: key_d_ = true; break;
     case Qt::Key_Space: fire_ = true; break;
-    case Qt::Key_Escape: close(); break;
+
+    // ---- P2 (только в дуэли) ----
+    case Qt::Key_Up:    if (is_duo) p2_w_ = true; break;
+    case Qt::Key_Down:  if (is_duo) p2_s_ = true; break;
+    case Qt::Key_Left:  if (is_duo) p2_a_ = true; break;
+    case Qt::Key_Right: if (is_duo) p2_d_ = true; break;
+    case Qt::Key_Return:
+    case Qt::Key_Enter: if (is_duo) p2_fire_ = true; break;
+
+    case Qt::Key_Escape: paused_ = true; update(); break;
+
     case Qt::Key_Q:
-        if (paused_) emit back_to_menu();
+        if (paused_) {
+            paused_ = false;
+            emit back_to_menu();
+            return;
+        }
         break;
 
     default: QWidget::keyPressEvent(e); return;
@@ -148,6 +193,15 @@ void GameWidget::paintEvent(QPaintEvent*) {
         int sy = int(gy * cfg::TILE_SIZE - std::fmod(cam_y_ * cfg::TILE_SIZE,
                                                      cfg::TILE_SIZE));
         p.drawLine(0, sy, W, sy);
+    }
+
+    if (!game_) {
+        // рисуем пустой экран или "Loading..."
+        p.fillRect(rect(), QColor(20, 30, 25));
+        p.setPen(QColor(200, 200, 200));
+        p.setFont(QFont("Consolas", 24, QFont::Bold));
+        p.drawText(rect(), Qt::AlignCenter, "Загрузка...");
+        return;
     }
 
     auto snap = game_->snapshot();
@@ -376,11 +430,27 @@ void GameWidget::focusOutEvent(QFocusEvent* e) {
     QWidget::focusOutEvent(e);
 }
 
+void GameWidget::set_mode(GameMode m) {
+    pending_mode_ = m;
+}
+
 void GameWidget::restart() {
     if (game_) game_->stop();
     game_ = std::make_unique<Game>();
+    game_->set_mode(pending_mode_);
     game_->setup();
     game_->start();
     paused_ = false;
-    update();   // перерисовать сразу
+    update();
+}
+
+void GameWidget::showEvent(QShowEvent* e) {
+    QWidget::showEvent(e);
+    setFocus(Qt::OtherFocusReason);
+    grabKeyboard();   // ← захватываем клавиатуру
+}
+
+void GameWidget::hideEvent(QHideEvent* e) {
+    releaseKeyboard();
+    QWidget::hideEvent(e);
 }

@@ -24,7 +24,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     // stack_->addWidget(game_);
     // game_->hide();
 
-    connect(menu_, &MenuWidget::play_clicked, this, &MainWindow::start_new_game);
+    connect(menu_, &MenuWidget::single_player_clicked,
+            this, &MainWindow::start_single_player);
+    connect(menu_, &MenuWidget::two_players_clicked,
+            this, &MainWindow::start_two_players);
+
     connect(menu_, &MenuWidget::quit_clicked, this, &MainWindow::close);
     // connect(game_, &GameWidget::back_to_menu, this, &MainWindow::show_menu);
 
@@ -88,22 +92,40 @@ void MainWindow::start_new_game() {
         stack_->addWidget(game_);
         connect(game_, &GameWidget::back_to_menu, this, &MainWindow::show_menu);
         qDebug() << "[MainWindow] calling game_->restart()";
-        game_->restart();
-    } else {
-        qDebug() << "[MainWindow] restarting existing GameWidget";
-        game_->restart();
     }
-    qDebug() << "[MainWindow] showing game";
+    game_->restart();
     show_game();
-    qDebug() << "[MainWindow] done";
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* e) {
-    // Q — выход в меню из игры
-    if (e->key() == Qt::Key_Q && stack_->currentWidget() == game_) {
-        show_menu();
-        return;
+    if (stack_ && stack_->currentWidget() == game_) {
+        if (e->key() == Qt::Key_Q) {
+            show_menu();
+            return;
+        }
     }
     QMainWindow::keyPressEvent(e);
+}
+
+void MainWindow::start_single_player() {
+    if (!game_) {
+        game_ = new GameWidget(this);
+        stack_->addWidget(game_);
+        connect(game_, &GameWidget::back_to_menu, this, &MainWindow::show_menu);
+    }
+    game_->set_mode(GameMode::SinglePlayer);   // ← добавить в GameWidget
+    game_->restart();
+    show_game();
+}
+
+void MainWindow::start_two_players() {
+    if (!game_) {
+        game_ = new GameWidget(this);
+        stack_->addWidget(game_);
+        connect(game_, &GameWidget::back_to_menu, this, &MainWindow::show_menu);
+    }
+    game_->set_mode(GameMode::TwoPlayers);
+    game_->restart();
+    show_game();
 }
 

@@ -15,6 +15,7 @@ public:
     explicit GameWidget(QWidget* parent = nullptr);
     ~GameWidget() override;
     void restart();
+    void set_mode(GameMode m);
 
 signals:
     void back_to_menu();
@@ -27,6 +28,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void showEvent(QShowEvent*) override;
+    void hideEvent(QHideEvent*) override;
 
 private slots:
     void on_frame();
@@ -54,4 +57,9 @@ private:
     void   update_camera();
 
     bool paused_ = false;
+
+    bool p2_w_ = false, p2_a_ = false, p2_s_ = false, p2_d_ = false;
+    bool p2_fire_ = false;
+
+    GameMode pending_mode_ = GameMode::SinglePlayer;
 };

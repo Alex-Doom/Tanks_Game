@@ -19,41 +19,80 @@ Game::Game() : rng_(std::random_device{}()) {}
 Game::~Game() { stop(); }
 
 void Game::setup() {
+    tanks_.clear();
+    shells_.clear();
+    buildings_.clear();
+
+    // tanks_.reserve(16);
     tanks_.reserve(cfg::ENEMIES + 1);
     shells_.resize(512);
     buildings_.reserve(64);
 
-    Tank player;
-    player.id = 0;
-    player.team = Team::Red;
-    player.is_player = true;
-    player.x.store(5.0f);
-    player.y.store(float(cfg::MAP_H) / 2);
-    player.hp.store(150);
-    player.max_hp.store(150);
-    player.reload_time = 0.7f;
-    player.shell_speed = 24.0f;
-    player.move_speed  = 8.0f;
-    player.aim_angle.store(0.0f);
-    player.shell_type = ShellType::AP;
-    tanks_.push_back(std::move(player));
+    if (mode_ == GameMode::SinglePlayer) {
+        // Игрок + N AI-врагов (как сейчас)
+        Tank player;
+        player.id = 0;
+        player.team = Team::Red;
+        player.is_player = true;
+        player.x.store(5.0f);
+        player.y.store(float(cfg::MAP_H) / 2);
+        player.hp.store(150);
+        player.max_hp.store(150);
+        player.reload_time = 0.7f;
+        player.shell_speed = 24.0f;
+        player.move_speed  = 8.0f;
+        player.aim_angle.store(0.0f);
+        player.shell_type = ShellType::AP;
+        tanks_.push_back(std::move(player));
 
-    for (int i = 0; i < cfg::ENEMIES; ++i) {
-        Tank e;
-        e.id = 1 + i;
-        e.team = Team::Blue;
-        e.x.store(float(cfg::MAP_W - 5 - randi(rng_, 0, 5)));
-        e.y.store(float(3 + i * 4));
-        int hp = 60 + randi(rng_, 0, 60);
-        e.hp.store(hp);
-        e.max_hp.store(hp);
-        e.aim_angle.store(3.14159f);
-        e.reload_time = randf(rng_, 1.5f, 3.0f);
-        e.shell_speed = randf(rng_, 14.0f, 20.0f);
-        e.move_speed  = randf(rng_, 2.0f, 4.0f);
-        e.shell_type  = static_cast<ShellType>(randi(rng_, 0, 2));
-        tanks_.push_back(std::move(e));
+        for (int i = 0; i < cfg::ENEMIES; ++i) {
+            Tank e;
+            e.id = 1 + i;
+            e.team = Team::Blue;
+            e.x.store(float(cfg::MAP_W - 5 - randi(rng_, 0, 5)));
+            e.y.store(float(3 + i * 4));
+            int hp = 60 + randi(rng_, 0, 60);
+            e.hp.store(hp);
+            e.max_hp.store(hp);
+            e.aim_angle.store(3.14159f);
+            e.reload_time = randf(rng_, 1.5f, 3.0f);
+            e.shell_speed = randf(rng_, 14.0f, 20.0f);
+            e.move_speed  = randf(rng_, 2.0f, 4.0f);
+            e.shell_type  = static_cast<ShellType>(randi(rng_, 0, 2));
+            tanks_.push_back(std::move(e));
+        }
+    } else {
+        // TwoPlayers: 2 танка, 0 AI
+        Tank p1;
+        p1.id = 0;
+        p1.team = Team::Red;
+        p1.is_player = true;
+        p1.x.store(5.0f);
+        p1.y.store(float(cfg::MAP_H) / 2);
+        p1.hp.store(100);
+        p1.max_hp.store(100);
+        p1.reload_time = 1.0f;
+        p1.shell_speed = 20.0f;
+        p1.move_speed  = 7.0f;
+        tanks_.push_back(std::move(p1));
+
+        Tank p2;
+        p2.id = 1;
+        p2.team = Team::Blue;
+        p2.is_player = true;
+        p2.x.store(float(cfg::MAP_W - 5));
+        p2.y.store(float(cfg::MAP_H) / 2);
+        p2.hp.store(100);
+        p2.max_hp.store(100);
+        p2.reload_time = 1.0f;
+        p2.shell_speed = 20.0f;
+        p2.move_speed  = 7.0f;
+        p2.aim_angle.store(3.14159f);   // смотрит влево
+        tanks_.push_back(std::move(p2));
     }
+
+    // Здания (общие для обоих режимов)
+    // generate_buildings();
 
     for (int i = 0; i < 14; ++i) {
         Building b;
@@ -99,19 +138,22 @@ void Game::start() {
 }
 
 void Game::stop() {
+    if (stop_flag_.load()) return;
     stop_flag_.store(true);
     // Разбудить все потоки, пришедшие на barrier
-    if (start_barrier_ && end_barrier_) {
-        // Каждый поток должен дойти до barrier, но они проверяют stop_flag_
-        // в начале цикла. Просто даём им время завершиться.
-    }
+    // if (start_barrier_ && end_barrier_) {
+    //     // Каждый поток должен дойти до barrier, но они проверяют stop_flag_
+    //     // в начале цикла. Просто даём им время завершиться.
+    // }
     for (auto& t : threads_) if (t.joinable()) t.join();
     threads_.clear();
 }
 
-void Game::set_player_input(float dx, float dy, float aim, bool fire) {
-    if (tanks_.empty()) return;
-    Tank& p = tanks_[0];
+void Game::set_player_input(int player_index, float dx, float dy,
+                            float aim, bool fire) {
+    if (player_index < 0 || player_index >= int(tanks_.size())) return;
+    Tank& p = tanks_[player_index];
+    if (!p.is_player) return;
     p.player_dx.store(dx);
     p.player_dy.store(dy);
     p.player_aim.store(aim);

@@ -11,6 +11,11 @@
 #include <vector>
 #include <deque>
 
+enum class GameMode {
+    SinglePlayer,   // игрок против AI
+    TwoPlayers      // 2 игрока на одной клавиатуре
+};
+
 namespace cfg {
     constexpr int   MAP_W              = 60;
     constexpr int   MAP_H              = 30;
@@ -21,6 +26,8 @@ namespace cfg {
     constexpr float WIND_MAX           = 3.0f;
     constexpr float SHELL_LIFETIME     = 6.0f;
     constexpr float TILE_SIZE          = 24.0f;
+    constexpr int ENEMIES_SINGLE = 6;   // врагов в одиночной игре
+    constexpr int ENEMIES_DUO = 0;      // в дуэли врагов нет, только 2 игрока
 }
 
 class Game {
@@ -28,12 +35,16 @@ public:
     Game();
     ~Game();
 
+    void set_mode(GameMode m) { mode_ = m; }
+    GameMode mode() const { return mode_; }
+
     void setup();
     void start();
     void stop();
     bool is_running() const { return !stop_flag_.load(); }
 
-    void set_player_input(float dx, float dy, float aim, bool fire);
+    void set_player_input(int player_index, float dx, float dy,
+                                float aim, bool fire);
 
     struct Snapshot {
         struct TankS { int id; Team team; bool is_player;
@@ -90,4 +101,6 @@ private:
         while (a < -3.14159f) a += 2 * 3.14159f;
         return a;
     }
+
+    GameMode mode_ = GameMode::SinglePlayer;
 };

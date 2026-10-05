@@ -3,6 +3,7 @@
 #include <QStackedWidget>
 
 class QShowEvent;
+class QKeyEvent;
 class MenuWidget;
 class GameWidget;
 
@@ -25,4 +26,6 @@ private:
     QStackedWidget* stack_ = nullptr;
     MenuWidget* menu_ = nullptr;
     GameWidget* game_ = nullptr;
+    void start_single_player();
+    void start_two_players();
 };

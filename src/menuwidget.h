@@ -12,6 +12,7 @@ protected:
     void paintEvent(QPaintEvent*) override;
 
 signals:
-    void play_clicked();
     void quit_clicked();
+    void single_player_clicked();
+    void two_players_clicked();
 };

@@ -4,6 +4,8 @@
 #include <QPainter>
 
 MenuWidget::MenuWidget(QWidget* parent) : QWidget(parent) {
+    setFocusPolicy(Qt::StrongFocus);
+
     setMinimumSize(1000, 600);
     setAutoFillBackground(true);
 
@@ -47,11 +49,18 @@ MenuWidget::MenuWidget(QWidget* parent) : QWidget(parent) {
         return b;
     };
 
-    QPushButton* playBtn = makeBtn("ИГРАТЬ");
+    QPushButton* singleBtn = makeBtn("ОДИНОЧНАЯ ИГРА");
+    QPushButton* duoBtn    = makeBtn("ИГРА С ДРУГОМ");
     QPushButton* quitBtn = makeBtn("ВЫХОД");
-    layout->addWidget(playBtn, 0, Qt::AlignCenter);
+    layout->addWidget(singleBtn, 0, Qt::AlignCenter);
+    layout->addSpacing(15);
+    layout->addWidget(duoBtn, 0, Qt::AlignCenter);
     layout->addSpacing(15);
     layout->addWidget(quitBtn, 0, Qt::AlignCenter);
+
+    connect(singleBtn, &QPushButton::clicked, this, &MenuWidget::single_player_clicked);
+    connect(duoBtn,    &QPushButton::clicked, this, &MenuWidget::two_players_clicked);
+    connect(quitBtn,   &QPushButton::clicked, this, &MenuWidget::quit_clicked);
 
     layout->addSpacing(40);
 
@@ -64,9 +73,6 @@ MenuWidget::MenuWidget(QWidget* parent) : QWidget(parent) {
     help->setStyleSheet("color: #909090; background: transparent;");
     help->setAlignment(Qt::AlignCenter);
     layout->addWidget(help);
-
-    connect(playBtn, &QPushButton::clicked, this, &MenuWidget::play_clicked);
-    connect(quitBtn, &QPushButton::clicked, this, &MenuWidget::quit_clicked);
 }
 
 // красивый фон
