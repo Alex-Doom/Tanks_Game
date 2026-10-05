@@ -5,8 +5,11 @@
 #include <QMouseEvent>
 #include <QImage>
 #include <QElapsedTimer>
+#include <QSet>
 #include <memory>
 #include "game.h"
+
+enum class GameMode { Menu, SinglePlayer, Multiplayer, Paused };
 
 class GameWidget : public QWidget {
     Q_OBJECT
@@ -31,20 +34,35 @@ private:
     QTimer*    timer_ = nullptr;
     QElapsedTimer clock_;
 
-    // input state (Qt thread)
-    bool key_w_ = false, key_a_ = false, key_s_ = false, key_d_ = false;
-    bool fire_ = false;
-    float mouse_world_x_ = 0, mouse_world_y_ = 0;
+    GameMode game_mode_ = GameMode::Menu;
+    GameMode saved_game_mode_ = GameMode::SinglePlayer;
 
-    // virtual viewport
-    float cam_x_ = 0, cam_y_ = 0;   // top-left of visible region (in cells)
+    // Надежный наборcurrently нажатых клавиш (исключает залипание)
+    QSet<int> pressed_keys_;
+
+    // Состояние ввода (вычисляется из pressed_keys_)
+    bool p1_w_ = false, p1_a_ = false, p1_s_ = false, p1_d_ = false;
+    bool p1_fire_ = false;
+    bool p2_up_ = false, p2_down_ = false, p2_left_ = false, p2_right_ = false;
+    bool p2_fire_ = false; // Для ЛКМ
+
+    float mouse_world_x_ = 0, mouse_world_y_ = 0;
+    float last_aim1_ = 0.0f;
+    float last_aim2_ = 3.14159f;
+
+    float cam_x_ = 0, cam_y_ = 0;
     int   view_w_cells_ = 60;
     int   view_h_cells_ = 30;
 
-    // animation
     float explosion_pulse_ = 0;
+    int menu_hover_ = -1;
+    int pause_hover_ = -1;
+    int gameover_hover_ = -1;
 
+    void  update_input_flags();
     void  update_player_input();
     QPointF cell_to_screen(float x, float y) const;
-    void   update_camera();
+    void  update_camera();
+    void  start_game(GameMode mode);
+    void  close_app();
 };
