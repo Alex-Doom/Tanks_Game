@@ -10,9 +10,14 @@
 
 class GameWidget : public QWidget {
     Q_OBJECT
+
 public:
     explicit GameWidget(QWidget* parent = nullptr);
     ~GameWidget() override;
+    void restart();
+
+signals:
+    void back_to_menu();
 
 protected:
     void paintEvent(QPaintEvent*) override;
@@ -47,4 +52,6 @@ private:
     void  update_player_input();
     QPointF cell_to_screen(float x, float y) const;
     void   update_camera();
+
+    bool paused_ = false;
 };

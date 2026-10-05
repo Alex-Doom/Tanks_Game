@@ -1,12 +1,12 @@
 /****************************************************************************
-** Meta object code from reading C++ file 'gamewidget.h'
+** Meta object code from reading C++ file 'menuwidget.h'
 **
 ** Created by: The Qt Meta Object Compiler version 69 (Qt 6.9.3)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
-#include "../src/gamewidget.h"
+#include "../src/menuwidget.h"
 #include <QtCore/qmetatype.h>
 
 #include <QtCore/qtmochelpers.h>
@@ -16,7 +16,7 @@
 
 #include <QtCore/qxptype_traits.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
-#error "The header file 'gamewidget.h' doesn't include <QObject>."
+#error "The header file 'menuwidget.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 69
 #error "This file was generated using the moc from 6.9.3. It"
 #error "cannot be used with the include files from this version of Qt."
@@ -31,72 +31,74 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 QT_WARNING_DISABLE_GCC("-Wuseless-cast")
 namespace {
-struct qt_meta_tag_ZN10GameWidgetE_t {};
+struct qt_meta_tag_ZN10MenuWidgetE_t {};
 } // unnamed namespace
 
-template <> constexpr inline auto GameWidget::qt_create_metaobjectdata<qt_meta_tag_ZN10GameWidgetE_t>()
+template <> constexpr inline auto MenuWidget::qt_create_metaobjectdata<qt_meta_tag_ZN10MenuWidgetE_t>()
 {
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
-        "GameWidget",
-        "back_to_menu",
+        "MenuWidget",
+        "play_clicked",
         "",
-        "on_frame"
+        "quit_clicked"
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Signal 'back_to_menu'
+        // Signal 'play_clicked'
         QtMocHelpers::SignalData<void()>(1, 2, QMC::AccessPublic, QMetaType::Void),
-        // Slot 'on_frame'
-        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Signal 'quit_clicked'
+        QtMocHelpers::SignalData<void()>(3, 2, QMC::AccessPublic, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
     QtMocHelpers::UintData qt_enums {
     };
-    return QtMocHelpers::metaObjectData<GameWidget, qt_meta_tag_ZN10GameWidgetE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+    return QtMocHelpers::metaObjectData<MenuWidget, qt_meta_tag_ZN10MenuWidgetE_t>(QMC::MetaObjectFlag{}, qt_stringData,
             qt_methods, qt_properties, qt_enums);
 }
-Q_CONSTINIT const QMetaObject GameWidget::staticMetaObject = { {
+Q_CONSTINIT const QMetaObject MenuWidget::staticMetaObject = { {
     QMetaObject::SuperData::link<QWidget::staticMetaObject>(),
-    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN10GameWidgetE_t>.stringdata,
-    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN10GameWidgetE_t>.data,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN10MenuWidgetE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN10MenuWidgetE_t>.data,
     qt_static_metacall,
     nullptr,
-    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN10GameWidgetE_t>.metaTypes,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN10MenuWidgetE_t>.metaTypes,
     nullptr
 } };
 
-void GameWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+void MenuWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
-    auto *_t = static_cast<GameWidget *>(_o);
+    auto *_t = static_cast<MenuWidget *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->back_to_menu(); break;
-        case 1: _t->on_frame(); break;
+        case 0: _t->play_clicked(); break;
+        case 1: _t->quit_clicked(); break;
         default: ;
         }
     }
     if (_c == QMetaObject::IndexOfMethod) {
-        if (QtMocHelpers::indexOfMethod<void (GameWidget::*)()>(_a, &GameWidget::back_to_menu, 0))
+        if (QtMocHelpers::indexOfMethod<void (MenuWidget::*)()>(_a, &MenuWidget::play_clicked, 0))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (MenuWidget::*)()>(_a, &MenuWidget::quit_clicked, 1))
             return;
     }
 }
 
-const QMetaObject *GameWidget::metaObject() const
+const QMetaObject *MenuWidget::metaObject() const
 {
     return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
 }
 
-void *GameWidget::qt_metacast(const char *_clname)
+void *MenuWidget::qt_metacast(const char *_clname)
 {
     if (!_clname) return nullptr;
-    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN10GameWidgetE_t>.strings))
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN10MenuWidgetE_t>.strings))
         return static_cast<void*>(this);
     return QWidget::qt_metacast(_clname);
 }
 
-int GameWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+int MenuWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QWidget::qt_metacall(_c, _id, _a);
     if (_id < 0)
@@ -115,8 +117,14 @@ int GameWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void GameWidget::back_to_menu()
+void MenuWidget::play_clicked()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
+}
+
+// SIGNAL 1
+void MenuWidget::quit_clicked()
+{
+    QMetaObject::activate(this, &staticMetaObject, 1, nullptr);
 }
 QT_WARNING_POP

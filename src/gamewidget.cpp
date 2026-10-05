@@ -4,6 +4,7 @@
 #include <QFont>
 #include <QDebug>
 #include <cmath>
+#include <QCursor>
 
 GameWidget::GameWidget(QWidget* parent) : QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
@@ -15,7 +16,7 @@ GameWidget::GameWidget(QWidget* parent) : QWidget(parent) {
 
     game_ = std::make_unique<Game>();
     game_->setup();
-    game_->start();
+    // game_->start();
 
     timer_ = new QTimer(this);
     connect(timer_, &QTimer::timeout, this, &GameWidget::on_frame);
@@ -88,6 +89,10 @@ void GameWidget::keyPressEvent(QKeyEvent* e) {
     case Qt::Key_D: case Qt::Key_Right: key_d_ = true; break;
     case Qt::Key_Space: fire_ = true; break;
     case Qt::Key_Escape: close(); break;
+    case Qt::Key_Q:
+        if (paused_) emit back_to_menu();
+        break;
+
     default: QWidget::keyPressEvent(e); return;
     }
     e->accept();
@@ -315,6 +320,31 @@ void GameWidget::paintEvent(QPaintEvent*) {
     p.drawText(10, H - 10,
                "WASD — движение, мышь — прицел, ЛКМ/Space — огонь, Esc — выход");
 
+
+    if (paused_) {
+        p.setBrush(QColor(0, 0, 0, 220));
+        p.drawRect(rect());
+        p.setPen(QColor(255, 255, 255));
+        QFont big("Consolas", 40, QFont::Bold);
+        p.setFont(big);
+        QString t = "PAUSE";
+        QFontMetrics fm(big);
+        int tw = fm.horizontalAdvance(t);
+        p.drawText((W - tw) / 2, H / 2 - 40, t);
+
+        p.setFont(QFont("Consolas", 16));
+        p.setPen(QColor(220, 220, 220));
+        QString s1 = "Esc — продолжить";
+        QString s2 = "R — рестарт";
+        QString s3 = "Q — в главное меню";
+        tw = QFontMetrics(QFont("Consolas", 16)).horizontalAdvance(s1);
+        p.drawText((W - tw) / 2, H / 2 + 30, s1);
+        tw = QFontMetrics(QFont("Consolas", 16)).horizontalAdvance(s2);
+        p.drawText((W - tw) / 2, H / 2 + 60, s2);
+        tw = QFontMetrics(QFont("Consolas", 16)).horizontalAdvance(s3);
+        p.drawText((W - tw) / 2, H / 2 + 90, s3);
+    }
+
     // ----- Game Over -----
     if (snap.game_over) {
         p.setBrush(QColor(0, 0, 0, 200));
@@ -344,4 +374,13 @@ void GameWidget::focusOutEvent(QFocusEvent* e) {
     key_w_ = key_a_ = key_s_ = key_d_ = false;
     fire_ = false;
     QWidget::focusOutEvent(e);
+}
+
+void GameWidget::restart() {
+    if (game_) game_->stop();
+    game_ = std::make_unique<Game>();
+    game_->setup();
+    game_->start();
+    paused_ = false;
+    update();   // перерисовать сразу
 }

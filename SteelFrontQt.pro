@@ -11,13 +11,15 @@ SOURCES += \
     src/main.cpp \
     src/mainwindow.cpp \
     src/gamewidget.cpp \
-    src/game.cpp
+    src/game.cpp \
+    src/menuwidget.cpp
 
 HEADERS += \
     src/mainwindow.h \
     src/gamewidget.h \
     src/game.h \
     src/entities.h \
+    src/menuwidget.h \
     src/ring_queue.h
 
 QMAKE_CXXFLAGS_RELEASE += -O2
