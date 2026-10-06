@@ -101,15 +101,12 @@ void GameWidget::on_frame() {
 void GameWidget::update_player_input() {
     if (game_mode_ == GameMode::Menu || game_mode_ == GameMode::Paused) return;
 
-    // ===== ЧИТАЕМ СОСТОЯНИЕ КЛАВИШ НАПРЯМУЮ ЧЕРЕЗ WINDOWS API =====
-    // Это на 100% надёжно — мы спрашиваем у ОС "нажата ли клавиша прямо сейчас"
+    // ===== ЧИТАЕМ СОСТОЯНИЕ КЛАВИШ =====
     p1_w_ = isKeyDown('W');
     p1_s_ = isKeyDown('S');
     p1_a_ = isKeyDown('A');
     p1_d_ = isKeyDown('D');
-    // Space не трогаем — он управляется через mousePressEvent/Release для единообразия с ЛКМ
-    // Но если хотите, можно раскомментировать:
-    // p1_fire_ = isKeyDown(VK_SPACE);
+    bool space_down = isKeyDown(VK_SPACE);   // <-- ДОБАВЛЕНО: опрос SPACE
 
     p2_up_ = isKeyDown(VK_UP) || isKeyDown(VK_PRIOR) || isKeyDown(VK_HOME);
     p2_down_ = isKeyDown(VK_DOWN) || isKeyDown(VK_NEXT) || isKeyDown(VK_END);
@@ -132,6 +129,8 @@ void GameWidget::update_player_input() {
             if (t.is_player) { px = t.x; py = t.y; break; }
         }
         float aim = std::atan2(wy - py, wx - px);
+        // В одиночной игре: стрелять можно и Space, и мышью
+        p1_fire_ = space_down || p1_fire_;   // <-- ДОБАВЛЕНО
         game_->set_player_input(0, dx, dy, aim, p1_fire_);
     } else if (game_mode_ == GameMode::Multiplayer) {
         // Игрок 1 (WASD + Space)
@@ -142,9 +141,11 @@ void GameWidget::update_player_input() {
         if (p1_d_) dx1 += 1;
         float aim1 = (dx1 != 0 || dy1 != 0) ? std::atan2(dy1, dx1) : last_aim1_;
         last_aim1_ = aim1;
+        // В мультиплеере P1 стреляет ТОЛЬКО Space
+        p1_fire_ = space_down;               // <-- ИСПРАВЛЕНО: было p1_fire_ (от мыши)
         game_->set_player_input(0, dx1, dy1, aim1, p1_fire_);
 
-        // Игрок 2 (Стрелки + ЛКМ)
+        // Игрок 2 (Стрелки + ЛКМ) — без изменений
         float dx2 = 0, dy2 = 0;
         if (p2_up_) dy2 -= 1;
         if (p2_down_) dy2 += 1;
@@ -240,15 +241,18 @@ void GameWidget::mousePressEvent(QMouseEvent* e) {
         else p1_fire_ = true;
     }
     if (e->button() == Qt::RightButton) {
-        p1_fire_ = true;
+        if (game_mode_ == GameMode::SinglePlayer) p1_fire_ = true;  // ПКМ только в одиночной
     }
 }
 
 void GameWidget::mouseReleaseEvent(QMouseEvent* e) {
-    if (game_mode_ == GameMode::Multiplayer && e->button() == Qt::LeftButton) {
-        p2_fire_ = false;
-    } else if (e->button() == Qt::LeftButton || e->button() == Qt::RightButton) {
-        p1_fire_ = false;
+    if (game_mode_ == GameMode::Multiplayer) {
+        if (e->button() == Qt::LeftButton) p2_fire_ = false;
+    } else {
+        // В одиночной игре отпускаем p1_fire_ только если Space НЕ нажат
+        if (e->button() == Qt::LeftButton || e->button() == Qt::RightButton) {
+            if (!isKeyDown(VK_SPACE)) p1_fire_ = false;
+        }
     }
 }
 
