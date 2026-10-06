@@ -528,6 +528,7 @@ debug/moc_gamewidget.cpp: src/gamewidget.h \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QMouseEvent \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QImage \
 		../../../../Qt/6.9.3/mingw_64/include/QtCore/QElapsedTimer \
+		../../../../Qt/6.9.3/mingw_64/include/QtCore/QSet \
 		src/game.h \
 		src/entities.h \
 		src/ring_queue.h \
@@ -965,6 +966,7 @@ debug/mainwindow.o: src/mainwindow.cpp src/mainwindow.h \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QMouseEvent \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QImage \
 		../../../../Qt/6.9.3/mingw_64/include/QtCore/QElapsedTimer \
+		../../../../Qt/6.9.3/mingw_64/include/QtCore/QSet \
 		src/game.h \
 		src/entities.h \
 		src/ring_queue.h \
@@ -1184,6 +1186,7 @@ debug/gamewidget.o: src/gamewidget.cpp src/gamewidget.h \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QMouseEvent \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QImage \
 		../../../../Qt/6.9.3/mingw_64/include/QtCore/QElapsedTimer \
+		../../../../Qt/6.9.3/mingw_64/include/QtCore/QSet \
 		src/game.h \
 		src/entities.h \
 		src/ring_queue.h \
@@ -1194,7 +1197,9 @@ debug/gamewidget.o: src/gamewidget.cpp src/gamewidget.h \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QPainterPath \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/qpainterpath.h \
 		../../../../Qt/6.9.3/mingw_64/include/QtGui/QFont \
-		../../../../Qt/6.9.3/mingw_64/include/QtCore/QDebug
+		../../../../Qt/6.9.3/mingw_64/include/QtCore/QDebug \
+		../../../../Qt/6.9.3/mingw_64/include/QtWidgets/QApplication \
+		../../../../Qt/6.9.3/mingw_64/include/QtWidgets/qapplication.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\gamewidget.o src\gamewidget.cpp
 
 debug/game.o: src/game.cpp src/game.h \
