@@ -5,6 +5,12 @@
 #include <QDebug>
 #include <cmath>
 #include <QApplication>
+#include <windows.h>  // Для GetAsyncKeyState
+
+// Вспомогательная функция: проверяет, нажата ли клавиша ПРЯМО СЕЙЧАС
+static bool isKeyDown(int vk) {
+    return (GetAsyncKeyState(vk) & 0x8000) != 0;
+}
 
 GameWidget::GameWidget(QWidget* parent) : QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
@@ -25,36 +31,27 @@ GameWidget::~GameWidget() {
     if (game_) game_->stop();
 }
 
+void GameWidget::reset_input() {
+    p1_w_ = p1_a_ = p1_s_ = p1_d_ = p1_fire_ = false;
+    p2_up_ = p2_down_ = p2_left_ = p2_right_ = p2_fire_ = false;
+}
+
 void GameWidget::start_game(GameMode mode) {
     game_mode_ = mode;
+    reset_input();
+
     if (game_) game_->stop();
     game_ = std::make_unique<Game>();
     game_->setup(mode == GameMode::Multiplayer);
     game_->start();
     timer_->setInterval(16);
 
-    // КРИТИЧЕСКИ ВАЖНО: возвращаем фокус клавиатуры после перезапуска игры
     setFocus(Qt::OtherFocusReason);
 }
 
 void GameWidget::close_app() {
     if (game_) game_->stop();
     QApplication::quit();
-}
-
-void GameWidget::update_input_flags() {
-    // Игрок 1 (WASD + Space)
-    p1_w_ = pressed_keys_.contains(Qt::Key_W);
-    p1_s_ = pressed_keys_.contains(Qt::Key_S);
-    p1_a_ = pressed_keys_.contains(Qt::Key_A);
-    p1_d_ = pressed_keys_.contains(Qt::Key_D);
-    p1_fire_ = pressed_keys_.contains(Qt::Key_Space);
-
-    // Игрок 2 (Стрелки, PgUp, Home и т.д.)
-    p2_up_ = pressed_keys_.contains(Qt::Key_Up) || pressed_keys_.contains(Qt::Key_PageUp) || pressed_keys_.contains(Qt::Key_Home);
-    p2_down_ = pressed_keys_.contains(Qt::Key_Down) || pressed_keys_.contains(Qt::Key_PageDown) || pressed_keys_.contains(Qt::Key_End);
-    p2_left_ = pressed_keys_.contains(Qt::Key_Left);
-    p2_right_ = pressed_keys_.contains(Qt::Key_Right);
 }
 
 void GameWidget::update_camera() {
@@ -104,6 +101,21 @@ void GameWidget::on_frame() {
 void GameWidget::update_player_input() {
     if (game_mode_ == GameMode::Menu || game_mode_ == GameMode::Paused) return;
 
+    // ===== ЧИТАЕМ СОСТОЯНИЕ КЛАВИШ НАПРЯМУЮ ЧЕРЕЗ WINDOWS API =====
+    // Это на 100% надёжно — мы спрашиваем у ОС "нажата ли клавиша прямо сейчас"
+    p1_w_ = isKeyDown('W');
+    p1_s_ = isKeyDown('S');
+    p1_a_ = isKeyDown('A');
+    p1_d_ = isKeyDown('D');
+    // Space не трогаем — он управляется через mousePressEvent/Release для единообразия с ЛКМ
+    // Но если хотите, можно раскомментировать:
+    // p1_fire_ = isKeyDown(VK_SPACE);
+
+    p2_up_ = isKeyDown(VK_UP) || isKeyDown(VK_PRIOR) || isKeyDown(VK_HOME);
+    p2_down_ = isKeyDown(VK_DOWN) || isKeyDown(VK_NEXT) || isKeyDown(VK_END);
+    p2_left_ = isKeyDown(VK_LEFT);
+    p2_right_ = isKeyDown(VK_RIGHT);
+
     if (game_mode_ == GameMode::SinglePlayer) {
         float dx = 0, dy = 0;
         if (p1_w_) dy -= 1;
@@ -122,7 +134,7 @@ void GameWidget::update_player_input() {
         float aim = std::atan2(wy - py, wx - px);
         game_->set_player_input(0, dx, dy, aim, p1_fire_);
     } else if (game_mode_ == GameMode::Multiplayer) {
-        // Игрок 1
+        // Игрок 1 (WASD + Space)
         float dx1 = 0, dy1 = 0;
         if (p1_w_) dy1 -= 1;
         if (p1_s_) dy1 += 1;
@@ -132,7 +144,7 @@ void GameWidget::update_player_input() {
         last_aim1_ = aim1;
         game_->set_player_input(0, dx1, dy1, aim1, p1_fire_);
 
-        // Игрок 2
+        // Игрок 2 (Стрелки + ЛКМ)
         float dx2 = 0, dy2 = 0;
         if (p2_up_) dy2 -= 1;
         if (p2_down_) dy2 += 1;
@@ -144,36 +156,41 @@ void GameWidget::update_player_input() {
     }
 }
 
-void GameWidget::keyPressEvent(QKeyEvent* e) {
-    if (game_mode_ == GameMode::Paused && e->key() == Qt::Key_Escape) {
-        game_mode_ = saved_game_mode_;
-        game_->set_paused(false);
-        e->accept();
-        return;
-    }
-    if (e->key() == Qt::Key_Escape && (game_mode_ == GameMode::SinglePlayer || game_mode_ == GameMode::Multiplayer)) {
-        saved_game_mode_ = game_mode_;
-        game_mode_ = GameMode::Paused;
-        game_->set_paused(true);
-        e->accept();
-        return;
-    }
+// ============================================================ ВВОД
+// Теперь keyPressEvent/keyReleaseEvent обрабатывают ТОЛЬКО служебные клавиши (Esc)
+// Игровые клавиши опрашиваются напрямую через GetAsyncKeyState в update_player_input()
 
-    pressed_keys_.insert(e->key());
-    update_input_flags();
-    e->accept();
+void GameWidget::keyPressEvent(QKeyEvent* e) {
+    // Esc для паузы/меню — обрабатываем через Qt
+    if (e->key() == Qt::Key_Escape) {
+        if (game_mode_ == GameMode::Paused) {
+            game_mode_ = saved_game_mode_;
+            game_->set_paused(false);
+            e->accept();
+            return;
+        }
+        if (game_mode_ == GameMode::SinglePlayer || game_mode_ == GameMode::Multiplayer) {
+            saved_game_mode_ = game_mode_;
+            game_mode_ = GameMode::Paused;
+            game_->set_paused(true);
+            e->accept();
+            return;
+        }
+        if (game_mode_ == GameMode::Menu) {
+            close_app();
+            e->accept();
+            return;
+        }
+    }
+    QWidget::keyPressEvent(e);
 }
 
 void GameWidget::keyReleaseEvent(QKeyEvent* e) {
-    // Просто удаляем клавишу из набора. Никаких isAutoRepeat() проверок,
-    // которые вызывают залипание при быстром нажатии.
-    pressed_keys_.remove(e->key());
-    update_input_flags();
-    e->accept();
+    // Ничего не делаем — всё опрашивается через GetAsyncKeyState
+    QWidget::keyReleaseEvent(e);
 }
 
 void GameWidget::mousePressEvent(QMouseEvent* e) {
-    // КРИТИЧЕСКИ ВАЖНО: возвращаем фокус при любом клике, чтобы клавиши не "пропадали"
     setFocus(Qt::MouseFocusReason);
 
     if (game_mode_ == GameMode::Menu) {
@@ -203,7 +220,6 @@ void GameWidget::mousePressEvent(QMouseEvent* e) {
         return;
     }
 
-    // Обработка Game Over
     auto snap = game_->snapshot();
     if (snap.game_over) {
         int W = width(), H = height();
@@ -218,6 +234,7 @@ void GameWidget::mousePressEvent(QMouseEvent* e) {
         return;
     }
 
+    // Стрельба через мышь
     if (e->button() == Qt::LeftButton) {
         if (game_mode_ == GameMode::Multiplayer) p2_fire_ = true;
         else p1_fire_ = true;
@@ -272,9 +289,8 @@ void GameWidget::mouseMoveEvent(QMouseEvent* e) {
 }
 
 void GameWidget::focusOutEvent(QFocusEvent* e) {
-    // При потере фокуса очищаем ВСЕ нажатые клавиши. Это гарантирует отсутствие залипаний.
-    pressed_keys_.clear();
-    update_input_flags();
+    // При потере фокуса сбрасываем только "стрельбу" — движение всё равно опрашивается через GetAsyncKeyState
+    p1_fire_ = false;
     p2_fire_ = false;
     QWidget::focusOutEvent(e);
 }
@@ -313,7 +329,6 @@ void GameWidget::paintEvent(QPaintEvent*) {
         return;
     }
 
-    // ----- ОТРИСОВКА ИГРЫ (фон для паузы и геймовера) -----
     p.fillRect(rect(), QColor(60, 90, 55));
     p.setPen(QPen(QColor(50, 75, 48), 1));
     for (int gx = 0; gx <= view_w_cells_ + 1; ++gx) {
@@ -456,7 +471,6 @@ void GameWidget::paintEvent(QPaintEvent*) {
                            : "WASD — движение, мышь — прицел, ЛКМ/Space — огонь, Esc — пауза";
     p.drawText(10, H - 10, controls);
 
-    // ----- ЭКРАН ОКОНЧАНИЯ ИГРЫ -----
     if (snap.game_over) {
         p.setBrush(QColor(0, 0, 0, 200));
         p.drawRect(rect());
@@ -479,7 +493,6 @@ void GameWidget::paintEvent(QPaintEvent*) {
         int tw = fm.horizontalAdvance(txt);
         p.drawText((W - tw) / 2, H / 2 - 20, txt);
 
-        // Кнопки
         QFont med("Consolas", 20);
         p.setFont(med);
         auto drawBtn = [&](const QRect& r, const QString& text, bool hover) {
@@ -492,7 +505,6 @@ void GameWidget::paintEvent(QPaintEvent*) {
         drawBtn(QRect(W/2 - 150, H/2 + 130, 300, 50), "Выйти в меню", gameover_hover_ == 1);
     }
 
-    // ----- МЕНЮ ПАУЗЫ -----
     if (game_mode_ == GameMode::Paused) {
         p.fillRect(rect(), QColor(0, 0, 0, 180));
         p.setPen(QColor(255, 255, 255));
